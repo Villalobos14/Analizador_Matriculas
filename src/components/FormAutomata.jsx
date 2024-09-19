@@ -72,7 +72,7 @@ const FormAutomata = () => {
             <input
               type="file"
               id="file"
-              accept=".pdf, .txt"
+              accept=".pdf, .txt, .doc"
               onChange={handleFileChange}
               className="w-full p-3 rounded-lg bg-gray-800 text-gray-300 focus:outline-none focus:ring-2 focus:ring-indigo-600"
             />
