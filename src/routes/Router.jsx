@@ -7,7 +7,7 @@ const AppRouter = () => {
   return (
     <BrowserRouter>  
       <Routes>
-        <Route path="/form" element={<Form />} />
+        <Route path="/" element={<Form />} />
       </Routes>
     </BrowserRouter>
   );
