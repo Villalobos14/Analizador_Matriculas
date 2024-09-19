@@ -35,7 +35,7 @@ const FormAutomata = () => {
       
       {/* Sección izquierda con títulos descriptivos */}
       <div className="w-1/2 flex flex-col justify-center items-start px-12 ">
-        <h1 className="text-5xl font-semibold mb-6 leading-tight text-gray-100">Explora el poder del análisis automático</h1>
+        <h1 className="text-5xl font-semibold mb-6 leading-tight text-gray-100">Explora el poder del análisis del autómata</h1>
         <p className="text-lg font-light mb-8 text-gray-400">
           Subir cadenas de texto o archivos nunca ha sido tan fácil. Descubre patrones y analiza de manera eficiente.
         </p>
