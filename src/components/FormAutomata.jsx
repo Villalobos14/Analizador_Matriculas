@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import axios from 'axios';
+import { useDropzone } from 'react-dropzone';
 
 const FormAutomata = () => {
   const [text, setText] = useState('');
@@ -8,23 +9,53 @@ const FormAutomata = () => {
   const [loading, setLoading] = useState(false);
 
   const handleTextChange = (e) => setText(e.target.value);
-  const handleFileChange = (e) => setFile(e.target.files[0]);
-  const handleSubmit = async (e) => {
+
+  // Manejar archivos con Dropzone, aceptando solo .txt, .doc, y .pdf
+  const onDrop = useCallback(acceptedFiles => {
+    setFile(acceptedFiles[0]);
+  }, []);
+
+  const { getRootProps, getInputProps, isDragActive } = useDropzone({
+    onDrop,
+    accept: {
+      'text/plain': ['.txt'],
+      'application/msword': ['.doc'],
+      'application/pdf': ['.pdf']
+    }
+  });
+
+  // Enviar solo el texto
+  const handleTextSubmit = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+
+    try {
+      const { data } = await axios.post('http://localhost:8000/analyze-text/', { text });
+      setResponse(`Texto analizado: ${data.text_analysis}`);
+    } catch (error) {
+      setResponse('Error al analizar el texto.');
+      console.error('Error al enviar el texto:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Enviar solo el archivo
+  const handleFileSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
 
     const formData = new FormData();
-    formData.append('text', text);
-    if (file) formData.append('file', file);
+    formData.append('file', file);
 
     try {
-      const { data } = await axios.post('http://localhost:8000/analyze/', formData, {
+      const { data } = await axios.post('http://localhost:8000/analyze-file/', formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
-      setResponse(`Texto analizado: ${data.text_analysis}\nArchivo analizado: ${data.file_analysis}`);
+      setResponse(`Archivo analizado: ${data.file_analysis}`);
     } catch (error) {
-      setResponse('Error al procesar la solicitud.');
-      console.error('Error al enviar los datos:', error);
+      setResponse('Error al analizar el archivo.');
+      console.error('Error al enviar el archivo:', error);
     } finally {
       setLoading(false);
     }
@@ -43,10 +74,7 @@ const FormAutomata = () => {
 
       {/* Formulario minimalista con transparencia */}
       <div className="w-1/2 flex items-center justify-center">
-        <form 
-          onSubmit={handleSubmit} 
-          className="w-full max-w-md p-8 rounded-lg bg-black/70 backdrop-blur-lg"
-        >
+        <form className="w-full max-w-md p-8 rounded-lg bg-black/70 backdrop-blur-lg">
           <h2 className="text-3xl font-bold mb-6 text-gray-100">Formulario de análisis de texto</h2>
           <p className="mb-6 text-gray-400">
             Ingresa una cadena de texto o sube un archivo para procesar. Nuestra herramienta analizará el contenido de manera precisa.
@@ -62,30 +90,44 @@ const FormAutomata = () => {
               onChange={handleTextChange}
               className="w-full p-3 rounded-lg bg-gray-800 text-gray-300 focus:outline-none focus:ring-2 focus:ring-indigo-600"
               placeholder="Escribe aquí la cadena de texto"
-              required
             />
           </div>
 
-          {/* Input para subir archivo */}
+          {/* Botón para enviar texto */}
           <div className="mb-6">
-            <label htmlFor="file" className="block text-sm font-medium mb-2 text-gray-400">Sube tu archivo</label>
-            <input
-              type="file"
-              id="file"
-              accept=".pdf, .txt, .doc"
-              onChange={handleFileChange}
-              className="w-full p-3 rounded-lg bg-gray-800 text-gray-300 focus:outline-none focus:ring-2 focus:ring-indigo-600"
-            />
-          </div>
-
-          {/* Botón de enviar */}
-          <div className="flex items-center justify-center">
             <button
-              type="submit"
+              onClick={handleTextSubmit}
               className={`w-full py-3 bg-purple-800 hover:bg-indigo-700 text-white font-semibold rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
               disabled={loading}
             >
-              {loading ? 'Procesando...' : 'Enviar para analizar'}
+              {loading ? 'Procesando texto...' : 'Enviar texto para analizar'}
+            </button>
+          </div>
+
+          {/* Dropzone para subir archivo */}
+          <div className="mb-6">
+            <label className="block text-sm font-medium mb-2 text-gray-400">Sube tu archivo</label>
+            <div
+              {...getRootProps()}
+              className="p-4   rounded-lg cursor-pointer bg-gray-800 text-gray-300 "
+            >
+              <input {...getInputProps()} />
+              {isDragActive ? (
+                <p className="text-gray-300">Suelta el archivo aquí...</p>
+              ) : (
+                <p className="text-gray-300">Arrastra y suelta un archivo aquí, o haz clic para seleccionar uno.</p>
+              )}
+            </div>
+          </div>
+
+          {/* Botón para enviar archivo */}
+          <div className="mb-6">
+            <button
+              onClick={handleFileSubmit}
+              className={`w-full py-3 bg-purple-800 hover:bg-indigo-700 text-white font-semibold rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
+              disabled={loading}
+            >
+              {loading ? 'Procesando archivo...' : 'Enviar archivo para analizar'}
             </button>
           </div>
 
