@@ -3,59 +3,55 @@ import axios from 'axios';
 import { useDropzone } from 'react-dropzone';
 
 const FormAutomata = () => {
-  const [text, setText] = useState('');
   const [file, setFile] = useState(null);
   const [response, setResponse] = useState('');
   const [loading, setLoading] = useState(false);
+  const [downloadUrl, setDownloadUrl] = useState(null);  // Estado para la URL del archivo descargable
 
-  const handleTextChange = (e) => setText(e.target.value);
-
-  // Manejar archivos con Dropzone, aceptando solo .txt, .doc, y .pdf
+  // Manejar archivos con Dropzone, aceptando archivos de varios tipos
   const onDrop = useCallback(acceptedFiles => {
     setFile(acceptedFiles[0]);
+    console.log(acceptedFiles[0]);  // Verifica el archivo cargado en consola
   }, []);
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
     accept: {
-      'text/plain': ['.txt'],
-      'application/msword': ['.doc'],
-      'application/pdf': ['.pdf']
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': ['.xlsx'],
+      'text/csv': ['.csv'],
+      'text/html': ['.html'],
+      'application/msword': ['.doc', '.docx'],
+      'application/pdf': ['.pdf'],
+      'text/plain': ['.txt']
     }
   });
 
-  // Enviar solo el texto
-  const handleTextSubmit = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-
-    try {
-      const { data } = await axios.post('http://localhost:8000/analyze-text/', { text });
-      setResponse(`Texto analizado: ${data.text_analysis}`);
-    } catch (error) {
-      setResponse('Error al analizar el texto.');
-      console.error('Error al enviar el texto:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Enviar solo el archivo
+  // Enviar el archivo al servidor
   const handleFileSubmit = async (e) => {
     e.preventDefault();
+    if (!file) {
+      setResponse("No se ha seleccionado ningún archivo.");
+      return;
+    }
+    
     setLoading(true);
-
     const formData = new FormData();
-    formData.append('file', file);
+    formData.append('file', file);  // Añadir el archivo al formData
 
     try {
-      const { data } = await axios.post('http://localhost:8000/analyze-file/', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' }
+      // Enviar el archivo al backend usando axios
+      const { data } = await axios.post('http://127.0.0.1:8000/api/validate_plate/', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },  // Correcto encabezado para formData
+        responseType: 'blob'  // Para manejar archivos de respuesta
       });
-      setResponse(`Archivo analizado: ${data.file_analysis}`);
+
+      // Crear una URL temporal para descargar el archivo
+      const url = window.URL.createObjectURL(new Blob([data]));
+      setDownloadUrl(url);
+      setResponse('Archivo analizado y listo para descargar.');
     } catch (error) {
+      console.error('Error al enviar el archivo:', error.response?.data || error.message);
       setResponse('Error al analizar el archivo.');
-      console.error('Error al enviar el archivo:', error);
     } finally {
       setLoading(false);
     }
@@ -76,40 +72,13 @@ const FormAutomata = () => {
       <div className="w-1/2 flex items-center justify-center">
         <form className="w-full max-w-md p-8 rounded-lg bg-black/70 backdrop-blur-lg">
           <h2 className="text-3xl font-bold mb-6 text-gray-100">Formulario de análisis de texto</h2>
-          <p className="mb-6 text-gray-400">
-            Ingresa una cadena de texto o sube un archivo para procesar. Nuestra herramienta analizará el contenido de manera precisa.
-          </p>
-
-          {/* Input de texto */}
-          <div className="mb-6">
-            <label htmlFor="text" className="block text-sm font-medium mb-2 text-gray-400">Ingresa tu texto</label>
-            <input
-              type="text"
-              id="text"
-              value={text}
-              onChange={handleTextChange}
-              className="w-full p-3 rounded-lg bg-gray-800 text-gray-300 focus:outline-none focus:ring-2 focus:ring-indigo-600"
-              placeholder="Escribe aquí la cadena de texto"
-            />
-          </div>
-
-          {/* Botón para enviar texto */}
-          <div className="mb-6">
-            <button
-              onClick={handleTextSubmit}
-              className={`w-full py-3 bg-purple-800 hover:bg-indigo-700 text-white font-semibold rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
-              disabled={loading}
-            >
-              {loading ? 'Procesando texto...' : 'Enviar texto para analizar'}
-            </button>
-          </div>
-
+          
           {/* Dropzone para subir archivo */}
           <div className="mb-6">
             <label className="block text-sm font-medium mb-2 text-gray-400">Sube tu archivo</label>
             <div
               {...getRootProps()}
-              className="p-4   rounded-lg cursor-pointer bg-gray-800 text-gray-300 "
+              className="p-4 rounded-lg cursor-pointer bg-gray-800 text-gray-300"
             >
               <input {...getInputProps()} />
               {isDragActive ? (
@@ -124,7 +93,7 @@ const FormAutomata = () => {
           <div className="mb-6">
             <button
               onClick={handleFileSubmit}
-              className={`w-full py-3 bg-purple-800 hover:bg-indigo-700 text-white font-semibold rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
+              className={`w-full py-3 bg-purple-800 hover:bg-purple-800 text-white font-semibold rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
               disabled={loading}
             >
               {loading ? 'Procesando archivo...' : 'Enviar archivo para analizar'}
@@ -132,9 +101,25 @@ const FormAutomata = () => {
           </div>
 
           {/* Respuesta */}
-          <div className="mt-6">
+          <div className="mt-6 w-full">
             <p className="whitespace-pre-wrap text-gray-400">{response}</p>
           </div>
+
+          {/* Botón de descarga si hay un archivo disponible */}
+          {downloadUrl && (
+            <div className="mt-6 w-full">
+              <div className='flex justify-center text-center'>
+
+              <a
+                href={downloadUrl}
+                download="resultado.csv"
+                className="w-full py-3 p-10 bg-orange-600 hover:bg-indigo-700  text-white font-semibold rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
+              >
+                Descargar archivo analizado
+              </a>
+              </div>
+            </div>
+          )}
         </form>
       </div>
     </div>
