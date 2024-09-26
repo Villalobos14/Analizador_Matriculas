@@ -40,7 +40,7 @@ const FormAutomata = () => {
 
     try {
       // Enviar el archivo al backend usando axios
-      const { data } = await axios.post('http://127.0.0.1:8000/api/validate_plate/', formData, {
+      const { data } = await axios.post('http://34.232.157.163/api/validate_plate/', formData, {
         headers: { 'Content-Type': 'multipart/form-data' },  // Correcto encabezado para formData
         responseType: 'blob'  // Para manejar archivos de respuesta
       });
